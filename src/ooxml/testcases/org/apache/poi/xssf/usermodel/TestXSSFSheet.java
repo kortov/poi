@@ -28,6 +28,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -351,30 +352,67 @@ public final class TestXSSFSheet extends BaseTestXSheet {
 
         //two level
         sheet.groupColumn(1, 2);
+        sheet.groupColumn(4, 5);
         cols = sheet.getCTWorksheet().getColsArray(0);
-        assertEquals(4, cols.sizeOfColArray());
+        assertEquals(6, cols.sizeOfColArray());
         colArray = cols.getColArray();
         assertEquals(2, colArray[1].getOutlineLevel());
+        assertEquals(2, colArray[3].getOutlineLevel());
 
-        //three level
-        sheet.groupColumn(6, 8);
-        sheet.groupColumn(2, 3);
-        cols = sheet.getCTWorksheet().getColsArray(0);
-        assertEquals(7, cols.sizeOfColArray());
-        colArray = cols.getColArray();
-        assertEquals(3, colArray[1].getOutlineLevel());
-        assertEquals(3, sheet.getCTWorksheet().getSheetFormatPr().getOutlineLevelCol());
+//        //three level
+//        sheet.groupColumn(6, 8);
+//        sheet.groupColumn(2, 3);
+//        cols = sheet.getCTWorksheet().getColsArray(0);
+//        assertEquals(7, cols.sizeOfColArray());
+//        colArray = cols.getColArray();
+//        assertEquals(3, colArray[1].getOutlineLevel());
+//        assertEquals(3, sheet.getCTWorksheet().getSheetFormatPr().getOutlineLevelCol());
 
-        sheet.ungroupColumn(8, 10);
-        colArray = cols.getColArray();
-        assertEquals(3, colArray[1].getOutlineLevel());
+//        sheet.ungroupColumn(8, 10);
+//        colArray = cols.getColArray();
+//        assertEquals(3, colArray[1].getOutlineLevel());
+//
+//        sheet.ungroupColumn(4, 6);
+//        sheet.ungroupColumn(2, 2);
+//        colArray = cols.getColArray();
+//        assertEquals(4, colArray.length);
+//        assertEquals(2, sheet.getCTWorksheet().getSheetFormatPr().getOutlineLevelCol());
 
-        sheet.ungroupColumn(4, 6);
-        sheet.ungroupColumn(2, 2);
-        colArray = cols.getColArray();
-        assertEquals(4, colArray.length);
-        assertEquals(2, sheet.getCTWorksheet().getSheetFormatPr().getOutlineLevelCol());
+        FileOutputStream out = new FileOutputStream("Test_1.xlsx");
+        workbook.write(out);
+        out.close();
+        workbook.close();
+    }
 
+    @Test
+    public void groupNested() throws IOException {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet();
+
+        //two level
+        sheet.groupColumn(4, 5);
+        sheet.groupColumn(7, 7);
+//        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
+//        assertEquals(2, cols.sizeOfColArray());
+//        CTCol[] colArray = cols.getColArray();
+//        assertNotNull(colArray);
+//        assertEquals(2 + 1, colArray[0].getMin()); // 1 based
+//        assertEquals(7 + 1, colArray[0].getMax()); // 1 based
+//        assertEquals(1, colArray[0].getOutlineLevel());
+//        assertEquals(0, sheet.getColumnOutlineLevel(0));
+
+        // one level
+        sheet.groupColumn(2, 8);
+//        cols = sheet.getCTWorksheet().getColsArray(0);
+//        assertEquals(6, cols.sizeOfColArray());
+//        colArray = cols.getColArray();
+//        assertEquals(2, colArray[1].getOutlineLevel());
+//        assertEquals(2, colArray[3].getOutlineLevel());
+
+
+        FileOutputStream out = new FileOutputStream("Test_1.xlsx");
+        workbook.write(out);
+        out.close();
         workbook.close();
     }
 

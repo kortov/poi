@@ -24,18 +24,7 @@ import static org.apache.poi.xssf.usermodel.helpers.XSSFPasswordHelper.validateP
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
@@ -1647,6 +1636,16 @@ public class XSSFSheet extends POIXMLDocumentPart implements Sheet  {
         CTCol fixCol_after = this.columnHelper.getColumn1Based(toColumn, false);
         if (fixCol_before != null && fixCol_after != null) {
             this.columnHelper.setColumnAttributes(fixCol_before, fixCol_after);
+        }
+
+        List<CTCol> ctColsResult= worksheet.getColsArray(0).getColList();
+        List<CTCol> ctColsByOne = new ArrayList<>();
+        List<Short> outlines = new ArrayList<>();
+
+        for(int index=fromColumn;index<=toColumn;index++){
+            CTCol col=columnHelper.getColumn1Based(index, false);
+            ctColsByOne.add(col);
+            outlines.add(col.getOutlineLevel());
         }
 
         for(int index=fromColumn;index<=toColumn;index++){
