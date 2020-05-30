@@ -32,9 +32,9 @@ import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTWorksheet;
 
 /**
  * Helper class for dealing with the Column settings on
- *  a CTWorksheet (the data part of a sheet).
+ * a CTWorksheet (the data part of a sheet).
  * Note - within POI, we use 0 based column indexes, but
- *  the column definitions in the XML are 1 based!
+ * the column definitions in the XML are 1 based!
  */
 public class ColumnHelper {
 
@@ -45,7 +45,7 @@ public class ColumnHelper {
         this.worksheet = worksheet;
         cleanColumns();
     }
-    
+
     public void cleanColumns() {
         TreeSet<CTCol> trackedCols = new TreeSet<>(CTColComparator.BY_MIN_MAX);
         CTCols newCols = CTCols.Factory.newInstance();
@@ -60,7 +60,7 @@ public class ColumnHelper {
         for (int y = i - 1; y >= 0; y--) {
             worksheet.removeCols(y);
         }
-        
+
         newCols.setColArray(trackedCols.toArray(new CTCol[0]));
         worksheet.addNewCols();
         worksheet.setColsArray(0, newCols);
@@ -75,6 +75,7 @@ public class ColumnHelper {
                 CTColComparator.BY_MIN_MAX);
         trackedCols.addAll(cols.getColList());
         addCleanColIntoCols(cols, newCol, trackedCols);
+//        addCleanColIntoColsOriginal(cols, newCol, trackedCols);
         cols.setColArray(trackedCols.toArray(new CTCol[0]));
         return cols;
     }
@@ -86,7 +87,8 @@ public class ColumnHelper {
             return;
         }
 
-//        trackedCols.removeAll(overlapping);
+        trackedCols.removeAll(overlapping);
+
         for (CTCol existing : overlapping) {
             // We add up to three columns for each existing one: non-overlap
             // before, overlap, non-overlap after.
@@ -96,27 +98,77 @@ public class ColumnHelper {
             setColumnAttributes(newCol, overlapCol);
             trackedCols.add(overlapCol);
 
-            CTCol potentiallyLower = trackedCols.lower(newCol);
-            CTCol lower = potentiallyLower == null ? newCol : potentiallyLower;
+            CTCol potentiallyLower = trackedCols.lower(overlapCol);
+            if (potentiallyLower != null) {
+                CTCol colBefore = createColBefore(existing, potentiallyLower.getMax() + 1, cols);
+                colBefore.setOutlineLevel(newCol.getOutlineLevel());
+                trackedCols.add(colBefore);
+            }
+        }
 
-            // за минимум берется не соседняя левая колонка, а новая
-            CTCol beforeCol = existing.getMin() < lower.getMin() ? existing
-                    : lower;
-            long[] before = new long[] {
-                    Math.min(existing.getMin(), lower.getMin()),
-                    overlap[0] - 1 };
+        if (newCol.getMin() < overlapping.get(0).getMin()) {
+            CTCol theMostLeftCol = createColBefore(overlapping.get(0), newCol.getMin(), cols);
+            setColumnAttributes(newCol, theMostLeftCol);
+            theMostLeftCol.setOutlineLevel(newCol.getOutlineLevel());
+            trackedCols.add(theMostLeftCol);
+        }
+
+
+        // баг, если newCol max меньше, то не добавляются правый колонки
+        if (newCol.getMax() > overlapping.get(overlapping.size() - 1).getMax()) {
+            CTCol theMostRightCol = createColAfter(overlapping.get(overlapping.size() - 1), newCol.getMax(), cols);
+            setColumnAttributes(newCol, theMostRightCol);
+            theMostRightCol.setOutlineLevel(newCol.getOutlineLevel());
+            trackedCols.add(theMostRightCol);
+        }
+    }
+
+    private CTCol createColBefore(final CTCol overlapCol, final long newMin, final CTCols cols) {
+        if (newMin > overlapCol.getMin()) {
+            throw new IllegalArgumentException("newMin can't be greater than overlapCol's min");
+        }
+        long[] before = new long[]{newMin, overlapCol.getMin() - 1};
+        return cloneCol(cols, overlapCol, before);
+    }
+
+    private CTCol createColAfter(final CTCol overlapCol, final long newMax, final CTCols cols) {
+        if (overlapCol.getMax() > newMax) {
+            throw new IllegalArgumentException("overlapCol's max can't be greater than higherColumn's max");
+        }
+        long[] after = new long[]{overlapCol.getMax() + 1, newMax};
+        return cloneCol(cols, overlapCol, after);
+    }
+
+    private void addCleanColIntoColsOriginal(final CTCols cols, final CTCol newCol, final TreeSet<CTCol> trackedCols) {
+        List<CTCol> overlapping = getOverlappingCols(newCol, trackedCols);
+        if (overlapping.isEmpty()) {
+            trackedCols.add(cloneCol(cols, newCol));
+            return;
+        }
+
+        trackedCols.removeAll(overlapping);
+        for (CTCol existing : overlapping) {
+            // We add up to three columns for each existing one: non-overlap
+            // before, overlap, non-overlap after.
+            long[] overlap = getOverlap(newCol, existing);
+
+            CTCol overlapCol = cloneCol(cols, existing, overlap);
+            setColumnAttributes(newCol, overlapCol);
+            trackedCols.add(overlapCol);
+
+            CTCol beforeCol = existing.getMin() < newCol.getMin() ? existing
+                    : newCol;
+            long[] before = new long[]{
+                    Math.min(existing.getMin(), newCol.getMin()),
+                    overlap[0] - 1};
             if (before[0] <= before[1]) {
                 trackedCols.add(cloneCol(cols, beforeCol, before));
             }
 
-            CTCol potentiallyHigher = trackedCols.higher(existing);
-            CTCol higher = potentiallyHigher == null ? newCol : potentiallyHigher;
-
-            // за максимум берется максимум новой колонки, а не соседней справа
-            CTCol afterCol = existing.getMax() > higher.getMax() ? existing
-                    : higher;
-            long[] after = new long[] { overlap[1] + 1,
-                    Math.max(existing.getMax(), higher.getMax()) };
+            CTCol afterCol = existing.getMax() > newCol.getMax() ? existing
+                    : newCol;
+            long[] after = new long[]{overlap[1] + 1,
+                    Math.max(existing.getMax(), newCol.getMax())};
             if (after[0] <= after[1]) {
                 trackedCols.add(cloneCol(cols, afterCol, after));
             }
@@ -157,9 +209,9 @@ public class ColumnHelper {
     }
 
     private long[] toRange(final CTCol col) {
-        return new long[] { col.getMin(), col.getMax() };
+        return new long[]{col.getMin(), col.getMax()};
     }
-    
+
     public static void sortColumns(CTCols newCols) {
         CTCol[] colArray = newCols.getColArray();
         Arrays.sort(colArray, CTColComparator.BY_MIN_MAX);
@@ -178,17 +230,17 @@ public class ColumnHelper {
      * Returns the Column at the given 0 based index
      */
     public CTCol getColumn(long index, boolean splitColumns) {
-        return getColumn1Based(index+1, splitColumns);
+        return getColumn1Based(index + 1, splitColumns);
     }
 
     /**
      * Returns the Column at the given 1 based index.
      * POI default is 0 based, but the file stores
-     *  as 1 based.
+     * as 1 based.
      */
     public CTCol getColumn1Based(long index1, boolean splitColumns) {
         CTCols cols = worksheet.getColsArray(0);
-        
+
         // Fetching the array is quicker than working on the new style
         //  list, assuming we need to read many of them (which we often do),
         //  and assuming we're not making many changes (which we're not)
@@ -221,17 +273,17 @@ public class ColumnHelper {
     private CTCol insertCol(CTCols cols, long min, long max, CTCol[] colsWithAttributes) {
         return insertCol(cols, min, max, colsWithAttributes, false, null);
     }
-    
-    private CTCol insertCol(CTCols cols, long min, long max,            
-        CTCol[] colsWithAttributes, boolean ignoreExistsCheck, CTCol overrideColumn) {
-        if(ignoreExistsCheck || !columnExists(cols,min,max)){
+
+    private CTCol insertCol(CTCols cols, long min, long max,
+                            CTCol[] colsWithAttributes, boolean ignoreExistsCheck, CTCol overrideColumn) {
+        if (ignoreExistsCheck || !columnExists(cols, min, max)) {
             CTCol newCol = cols.insertNewCol(0);
             newCol.setMin(min);
             newCol.setMax(max);
             for (CTCol col : colsWithAttributes) {
                 setColumnAttributes(col, newCol);
             }
-            if (overrideColumn != null) setColumnAttributes(overrideColumn, newCol); 
+            if (overrideColumn != null) setColumnAttributes(overrideColumn, newCol);
             return newCol;
         }
         return null;
@@ -239,10 +291,10 @@ public class ColumnHelper {
 
     /**
      * Does the column at the given 0 based index exist
-     *  in the supplied list of column definitions?
+     * in the supplied list of column definitions?
      */
     public boolean columnExists(CTCols cols, long index) {
-        return columnExists1Based(cols, index+1);
+        return columnExists1Based(cols, index + 1);
     }
 
     private boolean columnExists1Based(CTCols cols, long index1) {
@@ -255,39 +307,40 @@ public class ColumnHelper {
     }
 
     public void setColumnAttributes(CTCol fromCol, CTCol toCol) {
-        if(fromCol.isSetBestFit()) toCol.setBestFit(fromCol.getBestFit());
-        if(fromCol.isSetCustomWidth()) toCol.setCustomWidth(fromCol.getCustomWidth());
-        if(fromCol.isSetHidden()) toCol.setHidden(fromCol.getHidden());
-        if(fromCol.isSetStyle()) toCol.setStyle(fromCol.getStyle());
-        if(fromCol.isSetWidth()) toCol.setWidth(fromCol.getWidth());
-        if(fromCol.isSetCollapsed()) toCol.setCollapsed(fromCol.getCollapsed());
-        if(fromCol.isSetPhonetic()) toCol.setPhonetic(fromCol.getPhonetic());
-        if(fromCol.isSetOutlineLevel()) toCol.setOutlineLevel(fromCol.getOutlineLevel());
+        if (fromCol.isSetBestFit()) toCol.setBestFit(fromCol.getBestFit());
+        if (fromCol.isSetCustomWidth()) toCol.setCustomWidth(fromCol.getCustomWidth());
+        if (fromCol.isSetHidden()) toCol.setHidden(fromCol.getHidden());
+        if (fromCol.isSetStyle()) toCol.setStyle(fromCol.getStyle());
+        if (fromCol.isSetWidth()) toCol.setWidth(fromCol.getWidth());
+        if (fromCol.isSetCollapsed()) toCol.setCollapsed(fromCol.getCollapsed());
+        if (fromCol.isSetPhonetic()) toCol.setPhonetic(fromCol.getPhonetic());
+        if (fromCol.isSetOutlineLevel()) toCol.setOutlineLevel(fromCol.getOutlineLevel());
         toCol.setCollapsed(fromCol.isSetCollapsed());
     }
 
     public void setColBestFit(long index, boolean bestFit) {
-        CTCol col = getOrCreateColumn1Based(index+1, false);
+        CTCol col = getOrCreateColumn1Based(index + 1, false);
         col.setBestFit(bestFit);
     }
+
     public void setCustomWidth(long index, boolean bestFit) {
-        CTCol col = getOrCreateColumn1Based(index+1, true);
+        CTCol col = getOrCreateColumn1Based(index + 1, true);
         col.setCustomWidth(bestFit);
     }
 
     public void setColWidth(long index, double width) {
-        CTCol col = getOrCreateColumn1Based(index+1, true);
+        CTCol col = getOrCreateColumn1Based(index + 1, true);
         col.setWidth(width);
     }
 
     public void setColHidden(long index, boolean hidden) {
-        CTCol col = getOrCreateColumn1Based(index+1, true);
+        CTCol col = getOrCreateColumn1Based(index + 1, true);
         col.setHidden(hidden);
     }
 
     /**
      * Return the CTCol at the given (0 based) column index,
-     *  creating it if required.
+     * creating it if required.
      */
     protected CTCol getOrCreateColumn1Based(long index1, boolean splitColumns) {
         CTCol col = getColumn1Based(index1, splitColumns);
@@ -302,12 +355,12 @@ public class ColumnHelper {
     public void setColDefaultStyle(long index, CellStyle style) {
         setColDefaultStyle(index, style.getIndex());
     }
-    
+
     public void setColDefaultStyle(long index, int styleId) {
-        CTCol col = getOrCreateColumn1Based(index+1, true);
+        CTCol col = getOrCreateColumn1Based(index + 1, true);
         col.setStyle(styleId);
     }
-    
+
     // Returns -1 if no column is found for the given index
     public int getColDefaultStyle(long index) {
         if (getColumn(index, false) != null) {

@@ -420,6 +420,59 @@ public final class TestXSSFSheet extends BaseTestXSheet {
     }
 
     @Test
+    public void groupFailed() throws IOException {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet();
+
+
+        sheet.groupColumn( 4, 7 );
+        sheet.groupColumn( 9, 12 );
+        sheet.groupColumn( 10, 11 );
+
+//        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
+//        assertEquals(2, cols.sizeOfColArray());
+//        CTCol[] colArray = cols.getColArray();
+//        assertNotNull(colArray);
+//        assertEquals(2 + 1, colArray[0].getMin()); // 1 based
+//        assertEquals(7 + 1, colArray[0].getMax()); // 1 based
+//        assertEquals(1, colArray[0].getOutlineLevel());
+//        assertEquals(0, sheet.getColumnOutlineLevel(0));
+
+        // one level
+
+//        cols = sheet.getCTWorksheet().getColsArray(0);
+//        assertEquals(6, cols.sizeOfColArray());
+//        colArray = cols.getColArray();
+//        assertEquals(2, colArray[1].getOutlineLevel());
+//        assertEquals(2, colArray[3].getOutlineLevel());
+
+
+        FileOutputStream out = new FileOutputStream("Test_1.xlsx");
+        workbook.write(out);
+        out.close();
+        workbook.close();
+    }
+
+    @Test
+    public void groupIntersected() throws IOException {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet();
+
+//        sheet.groupColumn(3, 4); // normal
+        //two level
+        sheet.groupColumn(2, 3);
+        sheet.groupColumn(3, 4); // bug
+
+
+
+
+        FileOutputStream out = new FileOutputStream("Test_1.xlsx");
+        workbook.write(out);
+        out.close();
+        workbook.close();
+    }
+
+    @Test
     public void groupCollapsed() throws IOException {
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFSheet sheet = workbook.createSheet();
