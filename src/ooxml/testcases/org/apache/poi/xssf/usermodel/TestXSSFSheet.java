@@ -389,9 +389,12 @@ public final class TestXSSFSheet extends BaseTestXSheet {
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFSheet sheet = workbook.createSheet();
 
+//        sheet.groupColumn(2, 8); // normal
         //two level
         sheet.groupColumn(4, 5);
         sheet.groupColumn(7, 7);
+        sheet.groupColumn(2, 8); // bug
+
 //        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
 //        assertEquals(2, cols.sizeOfColArray());
 //        CTCol[] colArray = cols.getColArray();
@@ -402,12 +405,32 @@ public final class TestXSSFSheet extends BaseTestXSheet {
 //        assertEquals(0, sheet.getColumnOutlineLevel(0));
 
         // one level
-        sheet.groupColumn(2, 8);
+
 //        cols = sheet.getCTWorksheet().getColsArray(0);
 //        assertEquals(6, cols.sizeOfColArray());
 //        colArray = cols.getColArray();
 //        assertEquals(2, colArray[1].getOutlineLevel());
 //        assertEquals(2, colArray[3].getOutlineLevel());
+
+
+        FileOutputStream out = new FileOutputStream("Test_1.xlsx");
+        workbook.write(out);
+        out.close();
+        workbook.close();
+    }
+
+    @Test
+    public void groupCollapsed() throws IOException {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet();
+
+        sheet.groupColumn(2, 8); // normal
+        sheet.setColumnGroupCollapsed(2, true);
+        //two level
+        sheet.groupColumn(4, 5);
+        sheet.groupColumn(7, 7);
+
+
 
 
         FileOutputStream out = new FileOutputStream("Test_1.xlsx");

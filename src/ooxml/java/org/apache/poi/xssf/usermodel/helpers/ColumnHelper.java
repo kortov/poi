@@ -86,7 +86,7 @@ public class ColumnHelper {
             return;
         }
 
-        trackedCols.removeAll(overlapping);
+//        trackedCols.removeAll(overlapping);
         for (CTCol existing : overlapping) {
             // We add up to three columns for each existing one: non-overlap
             // before, overlap, non-overlap after.
@@ -96,19 +96,27 @@ public class ColumnHelper {
             setColumnAttributes(newCol, overlapCol);
             trackedCols.add(overlapCol);
 
-            CTCol beforeCol = existing.getMin() < newCol.getMin() ? existing
-                    : newCol;
+            CTCol potentiallyLower = trackedCols.lower(newCol);
+            CTCol lower = potentiallyLower == null ? newCol : potentiallyLower;
+
+            // за минимум берется не соседняя левая колонка, а новая
+            CTCol beforeCol = existing.getMin() < lower.getMin() ? existing
+                    : lower;
             long[] before = new long[] {
-                    Math.min(existing.getMin(), newCol.getMin()),
+                    Math.min(existing.getMin(), lower.getMin()),
                     overlap[0] - 1 };
             if (before[0] <= before[1]) {
                 trackedCols.add(cloneCol(cols, beforeCol, before));
             }
 
-            CTCol afterCol = existing.getMax() > newCol.getMax() ? existing
-                    : newCol;
+            CTCol potentiallyHigher = trackedCols.higher(existing);
+            CTCol higher = potentiallyHigher == null ? newCol : potentiallyHigher;
+
+            // за максимум берется максимум новой колонки, а не соседней справа
+            CTCol afterCol = existing.getMax() > higher.getMax() ? existing
+                    : higher;
             long[] after = new long[] { overlap[1] + 1,
-                    Math.max(existing.getMax(), newCol.getMax()) };
+                    Math.max(existing.getMax(), higher.getMax()) };
             if (after[0] <= after[1]) {
                 trackedCols.add(cloneCol(cols, afterCol, after));
             }

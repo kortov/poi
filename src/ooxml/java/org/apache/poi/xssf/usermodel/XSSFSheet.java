@@ -1624,6 +1624,7 @@ public class XSSFSheet extends POIXMLDocumentPart implements Sheet  {
         // copy attributes, as they might be removed by merging with the new column
         // TODO: check if this fix is really necessary or if the sweeping algorithm
         // in addCleanColIntoCols needs to be adapted ...
+        // вроде если колонка попадает в промежуток левой соседней колонки, то не null
         CTCol fixCol_before = this.columnHelper.getColumn1Based(toColumn, false);
         if (fixCol_before != null) {
             fixCol_before = (CTCol)fixCol_before.copy();
@@ -1631,21 +1632,12 @@ public class XSSFSheet extends POIXMLDocumentPart implements Sheet  {
 
         ctCol.setMin(fromColumn);
         ctCol.setMax(toColumn);
+        // добавляет промежуточные колонки
         this.columnHelper.addCleanColIntoCols(ctCols, ctCol);
 
         CTCol fixCol_after = this.columnHelper.getColumn1Based(toColumn, false);
         if (fixCol_before != null && fixCol_after != null) {
             this.columnHelper.setColumnAttributes(fixCol_before, fixCol_after);
-        }
-
-        List<CTCol> ctColsResult= worksheet.getColsArray(0).getColList();
-        List<CTCol> ctColsByOne = new ArrayList<>();
-        List<Short> outlines = new ArrayList<>();
-
-        for(int index=fromColumn;index<=toColumn;index++){
-            CTCol col=columnHelper.getColumn1Based(index, false);
-            ctColsByOne.add(col);
-            outlines.add(col.getOutlineLevel());
         }
 
         for(int index=fromColumn;index<=toColumn;index++){
