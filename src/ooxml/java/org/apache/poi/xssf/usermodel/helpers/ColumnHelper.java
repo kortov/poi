@@ -89,6 +89,23 @@ public class ColumnHelper {
 
         trackedCols.removeAll(overlapping);
 
+        CTCol firstOverlapped = overlapping.get(0);
+        CTCol lastOverlapped = overlapping.get(overlapping.size() - 1);
+
+        if (newCol.getMin() < firstOverlapped.getMin()) {
+            CTCol newColClone = cloneCol(cols, newCol);
+            setColumnAttributes(newCol, firstOverlapped);
+            newColClone.setMax(firstOverlapped.getMin() - 1);
+            trackedCols.add(newColClone);
+        }
+
+        if (newCol.getMax() > lastOverlapped.getMax()) {
+            CTCol newColClone = cloneCol(cols, newCol);
+            setColumnAttributes(newCol, lastOverlapped);
+            newColClone.setMin(lastOverlapped.getMax() + 1);
+            trackedCols.add(newColClone);
+        }
+
         for (CTCol existing : overlapping) {
             // We add up to three columns for each existing one: non-overlap
             // before, overlap, non-overlap after.
@@ -106,21 +123,24 @@ public class ColumnHelper {
             }
         }
 
-        if (newCol.getMin() < overlapping.get(0).getMin()) {
-            CTCol theMostLeftCol = createColBefore(overlapping.get(0), newCol.getMin(), cols);
-            setColumnAttributes(newCol, theMostLeftCol);
-            theMostLeftCol.setOutlineLevel(newCol.getOutlineLevel());
-            trackedCols.add(theMostLeftCol);
-        }
-
-
-        // баг, если newCol max меньше, то не добавляются правый колонки
-        if (newCol.getMax() > overlapping.get(overlapping.size() - 1).getMax()) {
-            CTCol theMostRightCol = createColAfter(overlapping.get(overlapping.size() - 1), newCol.getMax(), cols);
-            setColumnAttributes(newCol, theMostRightCol);
-            theMostRightCol.setOutlineLevel(newCol.getOutlineLevel());
-            trackedCols.add(theMostRightCol);
-        }
+//        CTCol potentiallyLower = trackedCols.lower(newCol);
+//
+//
+//        if (newCol.getMin() < firstOverlapped.getMin()) {
+//            CTCol theMostLeftCol = createColBefore(firstOverlapped, newCol.getMin(), cols);
+//            setColumnAttributes(newCol, theMostLeftCol);
+//            theMostLeftCol.setOutlineLevel(newCol.getOutlineLevel());
+//            trackedCols.add(theMostLeftCol);
+//        }
+//
+//
+//        // баг, если newCol max меньше, то не добавляются правый колонки
+//        if (newCol.getMax() > overlapping.get(overlapping.size() - 1).getMax()) {
+//            CTCol theMostRightCol = createColAfter(overlapping.get(overlapping.size() - 1), newCol.getMax(), cols);
+//            setColumnAttributes(newCol, theMostRightCol);
+//            theMostRightCol.setOutlineLevel(newCol.getOutlineLevel());
+//            trackedCols.add(theMostRightCol);
+//        }
     }
 
     private CTCol createColBefore(final CTCol overlapCol, final long newMin, final CTCols cols) {
