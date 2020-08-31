@@ -337,6 +337,9 @@ public final class TestXSSFSheet extends BaseTestXSheet {
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFSheet sheet = workbook.createSheet();
 
+        sheet.insertNewColumnBefore(2, 0);
+        sheet.insertNewColumnBefore(3, 0);
+
         //one level
         sheet.groupColumn(2, 7);
         sheet.groupColumn(10, 11);

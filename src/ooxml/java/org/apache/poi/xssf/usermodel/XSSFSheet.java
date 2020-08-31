@@ -24,18 +24,7 @@ import static org.apache.poi.xssf.usermodel.helpers.XSSFPasswordHelper.validateP
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
@@ -4707,5 +4696,111 @@ public class XSSFSheet extends POIXMLDocumentPart implements Sheet  {
 
     public XSSFHeaderFooterProperties getHeaderFooterProperties() {
         return new XSSFHeaderFooterProperties(getSheetTypeHeaderFooter());
+    }
+
+    public void insertNewColumnBefore(int columnIndex, int headerRowNum) {
+        int numberOfRows = getNumberOfRows();
+        int numberOfColumns = getNumberOfColumns(headerRowNum);
+
+        for (int currentRowNum = 0; currentRowNum < numberOfRows; currentRowNum++) {
+            Row row = getRow(currentRowNum);
+
+            if (row == null) {
+                continue;
+            }
+            shiftRows(columnIndex, numberOfColumns, row);
+            handleInsertedColumn(columnIndex, row);
+        }
+
+        // Adjust the column widths
+        for (int col = numberOfColumns; col > columnIndex; col--) {
+            setColumnWidth(col, getColumnWidth(col - 1));
+        }
+
+    }
+
+    //не проверял работу метода, черновик
+//    public static void removeColumn(XSSFSheet ws, int columnIndex, int headerRowNum) {
+//        Objects.requireNonNull(ws);
+//
+//        int numberOfRows = getNumberOfRows(ws);
+//        for (int currentRowNum = 0; currentRowNum < numberOfRows; currentRowNum++) {
+//            Row row = ws.getRow(currentRowNum);
+//
+//            if (row == null) {
+//                continue;
+//            }
+//            Cell currentEmptyCell = row.getCell(columnIndex);
+//            if (currentEmptyCell != null) {
+//                row.removeCell(currentEmptyCell);
+//            }
+//        }
+//    }
+
+    private void handleInsertedColumn(int columnIndex, Row row) {
+        Cell currentEmptyCell = row.getCell(columnIndex);
+        Cell leftCell = null;
+        if (columnIndex != 0) {
+            leftCell = row.getCell(columnIndex - 1);
+        }
+        if (currentEmptyCell != null && leftCell != null) {
+            cloneCell(currentEmptyCell, leftCell);
+        } else if (currentEmptyCell != null) {
+            row.removeCell(currentEmptyCell);
+            row.createCell(columnIndex, CellType.BLANK);
+        }
+    }
+
+    private void shiftRows(int columnIndex, int numberOfColumns, Row row) {
+        for (int col = numberOfColumns; col > columnIndex; col--) {
+            Cell rightCell = row.getCell(col);
+            if (rightCell != null) {
+                row.removeCell(rightCell);
+            }
+
+            Cell leftCell = row.getCell(col - 1);
+
+            if (leftCell != null) {
+                Cell newCell = row.createCell(col, leftCell.getCellType());
+                cloneCell(newCell, leftCell);
+            }
+        }
+    }
+
+    private void cloneCell(Cell cNew, Cell cOld) {
+        cNew.setCellComment(cOld.getCellComment());
+        cNew.setCellStyle(cOld.getCellStyle());
+
+        switch (cOld.getCellType()) {
+            case BOOLEAN: {
+                cNew.setCellValue(cOld.getBooleanCellValue());
+                break;
+            }
+            case NUMERIC: {
+                cNew.setCellValue(cOld.getNumericCellValue());
+                break;
+            }
+            case STRING: {
+                cNew.setCellValue(cOld.getStringCellValue());
+                break;
+            }
+            case ERROR: {
+                cNew.setCellValue(cOld.getErrorCellValue());
+                break;
+            }
+            case FORMULA: {
+                cNew.setCellFormula(cOld.getCellFormula());
+                break;
+            }
+        }
+    }
+
+    public int getNumberOfRows() {
+        return this.getLastRowNum() + 1;
+    }
+
+    private int getNumberOfColumns(int headerRowNum) {
+        Row headerRow = this.getRow(headerRowNum);
+        return headerRow.getLastCellNum();
     }
 }
